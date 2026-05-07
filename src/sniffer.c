@@ -57,14 +57,15 @@ int main(int argc, char** argv)
         buf[12..13]: EtherType (0x0800=IPv4, 0x0806=ARP, 0x86DD=IPv6)
         buf[14..n-1]: payload */
 
-        struct ethhdr *eth = (struct ethhdr *)buf;
+        // struct ethhdr *eth = (struct ethhdr *)buf;
+        uint8_t *dest_mac = buf;
+        uint8_t *src_mac = buf+6;
+        uint16_t ether_type = (buf[12] << 8) + buf[13];
         printf("src: %02x:%02x:%02x:%02x:%02x:%02x → "
             "dst: %02x:%02x:%02x:%02x:%02x:%02x "
             "proto: 0x%04x\n",
-            eth->h_source[0], eth->h_source[1], eth->h_source[2],
-            eth->h_source[3], eth->h_source[4], eth->h_source[5],
-            eth->h_dest[0], eth->h_dest[1], eth->h_dest[2],
-            eth->h_dest[3], eth->h_dest[4], eth->h_dest[5],
-            ntohs(eth->h_proto));
+            src_mac[0], src_mac[1], src_mac[2], src_mac[3], src_mac[4], src_mac[5],
+            dest_mac[0], dest_mac[1], dest_mac[2], dest_mac[3], dest_mac[4], dest_mac[5],
+            ether_type);
     }
 }
