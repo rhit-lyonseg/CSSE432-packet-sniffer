@@ -5,18 +5,98 @@
 
     Authors: Ellis Lyons, Mark Hankins
 
-    Date Modified: 04/30/2026
+    Date Modified: 05/07/2026
 
     References: https://kernel-internals.org/net/packet-socket/
+                https://en.wikipedia.org/wiki/IPv4
+                https://en.wikipedia.org/wiki/IPv6
+                https://en.wikipedia.org/wiki/Address_Resolution_Protocol
 */
 
 #include <stdio.h>
+#include <string.h>
 #include <sys/socket.h>
 #include <linux/if_packet.h>
 #include <net/ethernet.h>
 #include <arpa/inet.h>
 #include <net/if.h>
 
+struct ethernet_header {
+    uint8_t dest_mac[6];
+    uint8_t src_mac[6];
+    uint16_t ether_type;
+};
+
+struct ipv4_header {
+    uint8_t version;
+    uint8_t ihl;
+    uint8_t tos;
+    uint16_t total_len;
+    uint16_t id;
+    uint8_t flags;
+    uint16_t fragment_offset;
+    uint8_t ttl;
+    uint8_t protocol;
+    uint16_t checksum;
+    uint8_t src_ip[4];
+    uint8_t dest_ip[4];
+};
+
+struct ipv6_header {
+    uint8_t version;
+    uint8_t traffic_class;
+    uint32_t flow_label;
+    uint16_t payload_length;
+    uint8_t next_header;
+    uint8_t hop_limit;
+    uint8_t src_ip[16];
+    uint8_t dest_ip[16];
+};
+
+struct arp_header {
+    uint16_t hw_type;
+    uint16_t proto_type;
+    uint8_t hw_length;
+    uint8_t proto_length;
+    uint16_t operation;
+    uint8_t sender_mac[6];
+    uint8_t sender_ip[4];
+    uint8_t target_mac[6];
+    uint8_t target_ip[4];
+};
+
+struct ipv4_header parse_ipv4(uint8_t *packet) {
+    // TODO: parse IPv4 headers
+    struct ipv4_header header;
+    return header;
+}
+
+struct ipv6_header parse_ipv6(uint8_t *packet) {
+    struct ipv6_header header;
+    header.version = packet[0] >> 4;
+    header.traffic_class = ((packet[0] & 0x0F) << 4) | (packet[1] >> 4);
+    header.flow_label = ((packet[1] & 0x0F) << 16) | (packet[2] << 8) | packet[3];
+    header.payload_length = (packet[4] << 8) | packet[5];
+    header.next_header = packet[6];
+    header.hop_limit = packet[7];
+    memcpy(header.src_ip, packet+8, 16);
+    memcpy(header.dest_ip, packet+24, 16);
+    return header;
+}
+
+struct arp_header parse_arp(uint8_t *packet) {
+    struct arp_header header;
+    header.hw_type = (packet[0] << 8) | packet[1];
+    header.proto_type = (packet[2] << 8) | packet[3];
+    header.hw_length = packet[4];
+    header.proto_length = packet[5];
+    header.operation = (packet[6] << 8) | packet[7];
+    memcpy(header.sender_mac, packet+8, 6);
+    memcpy(header.sender_ip, packet+14, 4);
+    memcpy(header.target_mac, packet+18, 6);
+    memcpy(header.target_ip, packet+24, 4);
+    return header;
+}
 
 int main(int argc, char** argv)
 {
@@ -57,15 +137,36 @@ int main(int argc, char** argv)
         buf[12..13]: EtherType (0x0800=IPv4, 0x0806=ARP, 0x86DD=IPv6)
         buf[14..n-1]: payload */
 
-        // struct ethhdr *eth = (struct ethhdr *)buf;
-        uint8_t *dest_mac = buf;
-        uint8_t *src_mac = buf+6;
-        uint16_t ether_type = (buf[12] << 8) + buf[13];
+        struct ethernet_header eth_header;
+        memcpy(eth_header.dest_mac, buf, 6);
+        memcpy(eth_header.src_mac, buf+6, 6);
+        eth_header.ether_type = (buf[12] << 8) + buf[13];
+
         printf("src: %02x:%02x:%02x:%02x:%02x:%02x → "
             "dst: %02x:%02x:%02x:%02x:%02x:%02x "
             "proto: 0x%04x\n",
-            src_mac[0], src_mac[1], src_mac[2], src_mac[3], src_mac[4], src_mac[5],
-            dest_mac[0], dest_mac[1], dest_mac[2], dest_mac[3], dest_mac[4], dest_mac[5],
-            ether_type);
+            eth_header.src_mac[0], eth_header.src_mac[1],
+            eth_header.src_mac[2], eth_header.src_mac[3],
+            eth_header.src_mac[4], eth_header.src_mac[5],
+            eth_header.dest_mac[0], eth_header.dest_mac[1],
+            eth_header.dest_mac[2], eth_header.dest_mac[3],
+            eth_header.dest_mac[4], eth_header.dest_mac[5],
+            eth_header.ether_type);
+
+        /* IPv4 */
+        if (eth_header.ether_type == 0x0800) {
+            struct ipv4_header header;
+            header = parse_ipv4(buf+14);
+        }
+        /* IPv6 */
+        else if (eth_header.ether_type == 0x86DD) {
+            struct ipv6_header header;
+            header = parse_ipv6(buf+14);
+        }
+        /* ARP */
+        else if (eth_header.ether_type == 0x0806) {
+            struct arp_header header;
+            header = parse_arp(buf+14);
+        }
     }
 }
