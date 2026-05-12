@@ -65,6 +65,13 @@ struct arp_header {
     uint8_t target_ip[4];
 };
 
+struct udp_header {
+    uint16_t src_port;
+    uint16_t dest_port;
+    uint16_t length;
+    uint16_t checksum;
+};
+
 struct ipv4_header parse_ipv4(uint8_t *packet) {
     // TODO: parse IPv4 headers
     struct ipv4_header header;
@@ -95,6 +102,17 @@ struct arp_header parse_arp(uint8_t *packet) {
     memcpy(header.sender_ip, packet+14, 4);
     memcpy(header.target_mac, packet+18, 6);
     memcpy(header.target_ip, packet+24, 4);
+    return header;
+}
+
+struct udp_header parse_udp(uint8_t *packet) {
+    struct udp_header header;
+
+    header.src_port = (packet[0] << 8) | packet[1];
+    header.dest_port = (packet[2] << 8) | packet[3];
+    header.length = (packet[4] << 8) | packet[5];
+    header.checksum = (packet[6] << 8) | packet[7];
+
     return header;
 }
 
