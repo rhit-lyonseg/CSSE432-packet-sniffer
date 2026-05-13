@@ -7,9 +7,14 @@
 #define ETHER_TYPE_ARP   0x0806
 #define ETHER_TYPE_IPV6  0x86DD
 
-#define IP_PROTO_ICMP  1
-#define IP_PROTO_TCP   6
-#define IP_PROTO_UDP   17
+#define IP_PROTO_ICMP   1
+#define IP_PROTO_IGMP   2
+#define IP_PROTO_TCP    6
+#define IP_PROTO_UDP    17
+#define IP_PROTO_ENCAP  41
+#define IP_PROTO_ICMPv6 58
+#define IP_PROTO_OSPF   89
+#define IP_PROTO_SCTP   132
 
 #define TCP_FIN  0x01
 #define TCP_SYN  0x02
@@ -82,17 +87,17 @@ struct tcp_header {
 };
 
 struct ethernet_header parse_ethernet(uint8_t *packet);
-struct ipv4_header     parse_ipv4(uint8_t *packet);
-struct ipv6_header     parse_ipv6(uint8_t *packet);
-struct arp_header      parse_arp(uint8_t *packet);
-struct udp_header      parse_udp(uint8_t *packet);
-struct tcp_header      parse_tcp(uint8_t *packet);
+struct ipv4_header parse_ipv4(uint8_t *packet);
+struct ipv6_header parse_ipv6(uint8_t *packet);
+struct arp_header parse_arp(uint8_t *packet);
+struct udp_header parse_udp(uint8_t *packet);
+struct tcp_header parse_tcp(uint8_t *packet);
 
-void print_ethernet(struct ethernet_header *eth);
-void print_ipv4(struct ipv4_header *ip);
-void print_ipv6(struct ipv6_header *ip);
-void print_arp(struct arp_header *arp);
-void print_udp(struct udp_header *udp);
-void print_tcp(struct tcp_header *tcp);
+void print_ethernet(struct ethernet_header header);
+void print_ipv4(struct ipv4_header header);
+void print_ipv6(struct ipv6_header header);
+void print_arp(struct arp_header header);
+void print_udp(struct udp_header header);
+void print_tcp(struct tcp_header header);
 
 #endif /* SNIFFER_H */

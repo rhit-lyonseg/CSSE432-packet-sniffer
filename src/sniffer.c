@@ -23,6 +23,17 @@
 
 #include "sniffer.h"
 
+struct ethernet_header parse_ethernet(uint8_t *packet)
+{
+    struct ethernet_header header;
+
+    memcpy(header.dest_mac, packet, 6);
+    memcpy(header.src_mac, packet+6, 6);
+    header.ether_type = ((uint16_t)packet[12] << 8) | packet[13];
+
+    return header;
+}
+
 struct ipv4_header parse_ipv4(uint8_t *packet) {
     struct ipv4_header header;
 
@@ -104,6 +115,81 @@ struct tcp_header parse_tcp(uint8_t *packet)
     return header;
 }
 
+void print_ethernet(struct ethernet_header header)
+{
+    printf("\t[ETHERNET]\n");
+    printf("\t\tSource MAC: %02x:%02x:%02x:%02x:%02x:%02x\n", header.src_mac[0], header.src_mac[1],
+                                                                header.src_mac[2], header.src_mac[3],
+                                                                header.src_mac[4], header.src_mac[5]);
+    printf("\t\tDestination MAC: %02x:%02x:%02x:%02x:%02x:%02x\n", header.dest_mac[0], header.dest_mac[1],
+                                                                header.dest_mac[2], header.dest_mac[3],
+                                                                header.dest_mac[4], header.dest_mac[5]);
+    printf("\t\tEther Type: ");
+    if (header.ether_type == ETHER_TYPE_IPV4) {
+        printf("IPv4\n");
+    } else if (header.ether_type == ETHER_TYPE_IPV6) {
+        printf("IPv6\n");
+    } else if (header.ether_type == ETHER_TYPE_ARP) {
+        printf("ARP\n");
+    }
+}
+
+void print_ipv4(struct ipv4_header header) {
+    printf("\t[IPv4]\n");
+    printf("\t\tVersion: %d\n", header.version);
+    printf("\t\tInternet Header Length: %d bytes\n", header.ihl * 4);
+    // tos
+    printf("\t\tTotal Length: %d\n", header.total_len);
+    printf("\t\tID: 0x%04x\n", header.id);
+    // flags
+    printf("\t\tFragment Offset: %d\n", header.fragment_offset);
+    printf("\t\tTime to Live: %d\n", header.ttl);
+    printf("\t\tProtocol: ");
+    if (header.protocol == IP_PROTO_TCP) {
+        printf("TCP\n");
+    } else if (header.protocol == IP_PROTO_UDP) {
+        printf("UDP\n");
+    } else if (header.protocol == IP_PROTO_ICMP) {
+        printf("ICMP\n");
+    } else {
+        printf("0x%02x (Unknown)\n", header.protocol);
+    }
+    printf("\t\tChecksum: 0x%04x\n", header.checksum);
+    printf("\t\tSource IP: %d.%d.%d.%d\n", header.src_ip[0], header.src_ip[1],
+                                            header.src_ip[2], header.src_ip[3]);
+    printf("\t\tDestination IP: %d.%d.%d.%d\n", header.dest_ip[0], header.dest_ip[1],
+                                                 header.dest_ip[2], header.dest_ip[3]);
+}
+
+void print_ipv6(struct ipv6_header header) {
+    printf("\t[IPv6]\n");
+    printf("\t\tVersion: %d\n", header.version);
+    printf("\t\tTraffic Class: 0x%02x\n", header.traffic_class);;
+    printf("\t\tFlow Label: 0x%05x\n", header.flow_label);
+    printf("\t\tPayload Length: %d\n", header.payload_length);
+    printf("\t\tNext Header: ");
+    if (header.next_header == IP_PROTO_TCP) {
+        printf("TCP\n");
+    } else if (header.next_header == IP_PROTO_UDP) {
+        printf("UDP\n");
+    } else if (header.next_header == IP_PROTO_ICMPv6) {
+        printf("ICMPv6\n");
+    } else {
+        printf("0x%02x (Unknown)\n", header.next_header);
+    }
+    printf("\t\tHop Limit: %d\n", header.hop_limit);
+    printf("\t\tSource IP: %02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x\n",
+           header.src_ip[0], header.src_ip[1], header.src_ip[2], header.src_ip[3],
+           header.src_ip[4], header.src_ip[5], header.src_ip[6], header.src_ip[7],
+           header.src_ip[8], header.src_ip[9], header.src_ip[10], header.src_ip[11],
+           header.src_ip[12], header.src_ip[13], header.src_ip[14], header.src_ip[15]);
+    printf("\t\tDestination IP: %02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x\n",
+           header.dest_ip[0], header.dest_ip[1], header.dest_ip[2], header.dest_ip[3],
+           header.dest_ip[4], header.dest_ip[5], header.dest_ip[6], header.dest_ip[7],
+           header.dest_ip[8], header.dest_ip[9], header.dest_ip[10], header.dest_ip[11],
+           header.dest_ip[12], header.dest_ip[13], header.dest_ip[14], header.dest_ip[15]);
+}
+
 int main(int argc, char** argv)
 {
     /* SOCK_RAW: receive raw Ethernet frames with headers */
@@ -144,30 +230,21 @@ int main(int argc, char** argv)
         buf[14..n-1]: payload */
 
         struct ethernet_header eth_header;
-        memcpy(eth_header.dest_mac, buf, 6);
-        memcpy(eth_header.src_mac, buf+6, 6);
-        eth_header.ether_type = (buf[12] << 8) + buf[13];
+        eth_header = parse_ethernet(buf);
 
-        printf("src: %02x:%02x:%02x:%02x:%02x:%02x → "
-            "dst: %02x:%02x:%02x:%02x:%02x:%02x "
-            "proto: 0x%04x\n",
-            eth_header.src_mac[0], eth_header.src_mac[1],
-            eth_header.src_mac[2], eth_header.src_mac[3],
-            eth_header.src_mac[4], eth_header.src_mac[5],
-            eth_header.dest_mac[0], eth_header.dest_mac[1],
-            eth_header.dest_mac[2], eth_header.dest_mac[3],
-            eth_header.dest_mac[4], eth_header.dest_mac[5],
-            eth_header.ether_type);
+        print_ethernet(eth_header);
 
         /* IPv4 */
         if (eth_header.ether_type == ETHER_TYPE_IPV4) {
             struct ipv4_header header;
             header = parse_ipv4(buf+14);
+            print_ipv4(header);
         }
         /* IPv6 */
         else if (eth_header.ether_type == ETHER_TYPE_IPV6) {
             struct ipv6_header header;
             header = parse_ipv6(buf+14);
+            print_ipv6(header);
         }
         /* ARP */
         else if (eth_header.ether_type == ETHER_TYPE_ARP) {
