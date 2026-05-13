@@ -295,6 +295,16 @@ void print_arp(struct arp_header header) {
                                             header.target_ip[2], header.target_ip[3]);
 }
 
+void print_tcp(struct tcp_header header) {
+    printf("\t[TCP]\n");
+    printf("\t\tTODO\n");
+}
+
+void print_udp(struct udp_header header) {
+    printf("\t[UDP]\n");
+    printf("\t\tTODO\n");
+}
+
 int main(int argc, char** argv)
 {
     /* SOCK_RAW: receive raw Ethernet frames with headers */
@@ -341,21 +351,42 @@ int main(int argc, char** argv)
 
         /* IPv4 */
         if (eth_header.ether_type == ETHER_TYPE_IPV4) {
-            struct ipv4_header header;
-            header = parse_ipv4(buf+14);
-            print_ipv4(header);
+            struct ipv4_header ipv4_header;
+            ipv4_header = parse_ipv4(buf+14);
+            print_ipv4(ipv4_header);
+
+            int ip_len = ipv4_header.ihl * 4;
+            if (ipv4_header.protocol == IP_PROTO_TCP) {
+                struct tcp_header tcp_header;
+                tcp_header = parse_tcp(buf+14+ip_len);
+                print_tcp(tcp_header);
+            } else if (ipv4_header.protocol == IP_PROTO_UDP) {
+                struct udp_header udp_header;
+                udp_header = parse_udp(buf+14+ip_len);
+                print_udp(udp_header);
+            }
         }
         /* IPv6 */
         else if (eth_header.ether_type == ETHER_TYPE_IPV6) {
-            struct ipv6_header header;
-            header = parse_ipv6(buf+14);
-            print_ipv6(header);
+            struct ipv6_header ipv6_header;
+            ipv6_header = parse_ipv6(buf+14);
+            print_ipv6(ipv6_header);
+
+            if (ip.next_header == IP_PROTO_TCP) {
+                struct tcp_header tcp;
+                tcp = parse_tcp(buf+14+40);
+                print_tcp(tcp);
+            } else if (ip.next_header == IP_PROTO_UDP) {
+                struct udp_header udp;
+                udp = parse_udp(buf+14+40);
+                print_udp(udp);
+            }
         }
         /* ARP */
         else if (eth_header.ether_type == ETHER_TYPE_ARP) {
-            struct arp_header header;
-            header = parse_arp(buf+14);
-            print_arp(header);
+            struct arp_header arp_header;
+            arp_header = parse_arp(buf+14);
+            print_arp(arp_header);
         }
     }
 }
