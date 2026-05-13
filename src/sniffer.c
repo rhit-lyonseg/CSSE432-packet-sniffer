@@ -372,11 +372,11 @@ int main(int argc, char** argv)
             ipv6_header = parse_ipv6(buf+14);
             print_ipv6(ipv6_header);
 
-            if (ip.next_header == IP_PROTO_TCP) {
+            if (ipv6_header.next_header == IP_PROTO_TCP) {
                 struct tcp_header tcp;
                 tcp = parse_tcp(buf+14+40);
                 print_tcp(tcp);
-            } else if (ip.next_header == IP_PROTO_UDP) {
+            } else if (ipv6_header.next_header == IP_PROTO_UDP) {
                 struct udp_header udp;
                 udp = parse_udp(buf+14+40);
                 print_udp(udp);
