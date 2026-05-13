@@ -21,97 +21,85 @@
 #include <arpa/inet.h>
 #include <net/if.h>
 
-struct ethernet_header {
-    uint8_t dest_mac[6];
-    uint8_t src_mac[6];
-    uint16_t ether_type;
-};
-
-struct ipv4_header {
-    uint8_t version;
-    uint8_t ihl;
-    uint8_t tos;
-    uint16_t total_len;
-    uint16_t id;
-    uint8_t flags;
-    uint16_t fragment_offset;
-    uint8_t ttl;
-    uint8_t protocol;
-    uint16_t checksum;
-    uint8_t src_ip[4];
-    uint8_t dest_ip[4];
-};
-
-struct ipv6_header {
-    uint8_t version;
-    uint8_t traffic_class;
-    uint32_t flow_label;
-    uint16_t payload_length;
-    uint8_t next_header;
-    uint8_t hop_limit;
-    uint8_t src_ip[16];
-    uint8_t dest_ip[16];
-};
-
-struct arp_header {
-    uint16_t hw_type;
-    uint16_t proto_type;
-    uint8_t hw_length;
-    uint8_t proto_length;
-    uint16_t operation;
-    uint8_t sender_mac[6];
-    uint8_t sender_ip[4];
-    uint8_t target_mac[6];
-    uint8_t target_ip[4];
-};
-
-struct udp_header {
-    uint16_t src_port;
-    uint16_t dest_port;
-    uint16_t length;
-    uint16_t checksum;
-};
+#include "sniffer.h"
 
 struct ipv4_header parse_ipv4(uint8_t *packet) {
-    // TODO: parse IPv4 headers
     struct ipv4_header header;
+
+    header.version = packet[0] >> 4;
+    header.ihl = packet[0] & 0x0F;
+    header.tos = packet[1];
+    header.total_len = ((uint16_t)packet[2] << 8) | packet[3];
+    header.id = ((uint16_t)packet[4] << 8) | packet[5];
+    header.flags = packet[6] >> 5;
+    header.fragment_offset = ((uint16_t)(packet[6] & 0x1F) << 8) | packet[7];
+    header.ttl = packet[8];
+    header.protocol = packet[9];
+    header.checksum = ((uint16_t)packet[10] << 8) | packet[11];
+    memcpy(header.src_ip, packet+12, 4);
+    memcpy(header.dest_ip, packet+16, 4);
+
     return header;
 }
 
-struct ipv6_header parse_ipv6(uint8_t *packet) {
+struct ipv6_header parse_ipv6(uint8_t *packet)
+{
     struct ipv6_header header;
+
     header.version = packet[0] >> 4;
     header.traffic_class = ((packet[0] & 0x0F) << 4) | (packet[1] >> 4);
-    header.flow_label = ((packet[1] & 0x0F) << 16) | (packet[2] << 8) | packet[3];
-    header.payload_length = (packet[4] << 8) | packet[5];
+    header.flow_label = ((uint32_t)(packet[1] & 0x0F) << 16) | ((uint32_t)packet[2] << 8) | (uint32_t)packet[3];
+    header.payload_length = ((uint16_t)packet[4] << 8) | packet[5];
     header.next_header = packet[6];
     header.hop_limit = packet[7];
     memcpy(header.src_ip, packet+8, 16);
     memcpy(header.dest_ip, packet+24, 16);
+
     return header;
 }
 
-struct arp_header parse_arp(uint8_t *packet) {
+struct arp_header parse_arp(uint8_t *packet)
+{
     struct arp_header header;
-    header.hw_type = (packet[0] << 8) | packet[1];
-    header.proto_type = (packet[2] << 8) | packet[3];
+
+    header.hw_type = ((uint16_t)packet[0] << 8) | packet[1];
+    header.proto_type = ((uint16_t)packet[2] << 8) | packet[3];
     header.hw_length = packet[4];
     header.proto_length = packet[5];
-    header.operation = (packet[6] << 8) | packet[7];
+    header.operation = ((uint16_t)packet[6] << 8) | packet[7];
     memcpy(header.sender_mac, packet+8, 6);
     memcpy(header.sender_ip, packet+14, 4);
     memcpy(header.target_mac, packet+18, 6);
     memcpy(header.target_ip, packet+24, 4);
+
     return header;
 }
 
-struct udp_header parse_udp(uint8_t *packet) {
+struct udp_header parse_udp(uint8_t *packet)
+{
     struct udp_header header;
 
-    header.src_port = (packet[0] << 8) | packet[1];
-    header.dest_port = (packet[2] << 8) | packet[3];
-    header.length = (packet[4] << 8) | packet[5];
-    header.checksum = (packet[6] << 8) | packet[7];
+    header.src_port = ((uint16_t)packet[0] << 8) | packet[1];
+    header.dest_port = ((uint16_t)packet[2] << 8) | packet[3];
+    header.length = ((uint16_t)packet[4] << 8) | packet[5];
+    header.checksum = ((uint16_t)packet[6] << 8) | packet[7];   
+
+    return header;
+}
+
+struct tcp_header parse_tcp(uint8_t *packet)
+{
+    struct tcp_header header;
+
+    header.src_port = ((uint16_t)packet[0] << 8) | packet[1];
+    header.dest_port = ((uint16_t)packet[2] << 8) | packet[3];
+    header.seq_num = ((uint32_t)packet[4] << 24) | ((uint32_t)packet[5] << 16) | ((uint32_t)packet[6] << 8) | packet[7];
+    header.ack_num = ((uint32_t)packet[8] << 24) | ((uint32_t)packet[9] << 16) | ((uint32_t)packet[10] << 8) | packet[11];
+    header.data_offset = packet[12] >> 4;
+    header.flags = packet[13];
+    header.window = ((uint16_t)packet[14] << 8) | packet[15];
+    header.checksum = ((uint16_t)packet[16] << 8) | packet[17];
+    header.urg_ptr = ((uint16_t)packet[18] << 8) | packet[19];
 
     return header;
 }
@@ -172,17 +160,17 @@ int main(int argc, char** argv)
             eth_header.ether_type);
 
         /* IPv4 */
-        if (eth_header.ether_type == 0x0800) {
+        if (eth_header.ether_type == ETHER_TYPE_IPV4) {
             struct ipv4_header header;
             header = parse_ipv4(buf+14);
         }
         /* IPv6 */
-        else if (eth_header.ether_type == 0x86DD) {
+        else if (eth_header.ether_type == ETHER_TYPE_IPV6) {
             struct ipv6_header header;
             header = parse_ipv6(buf+14);
         }
         /* ARP */
-        else if (eth_header.ether_type == 0x0806) {
+        else if (eth_header.ether_type == ETHER_TYPE_ARP) {
             struct arp_header header;
             header = parse_arp(buf+14);
         }
