@@ -16,6 +16,22 @@
 #define IP_PROTO_OSPF   89
 #define IP_PROTO_SCTP   132
 
+#define DSCP_BEST_EFFORT    0
+
+#define ECN_NOT_ECT  0
+#define ECN_ECT1     1
+#define ECN_ECT0     2
+#define ECN_CE       3
+
+#define IPV4_FLAG_MF  0x01
+#define IPV4_FLAG_DF  0x02
+
+#define ARP_HW_ETHERNET     1
+#define ARP_HW_IEEE802      6
+
+#define ARP_OP_REQUEST 1
+#define ARP_OP_REPLY   2
+
 #define TCP_FIN  0x01
 #define TCP_SYN  0x02
 #define TCP_RST  0x04
