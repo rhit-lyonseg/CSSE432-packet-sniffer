@@ -297,12 +297,48 @@ void print_arp(struct arp_header header) {
 
 void print_tcp(struct tcp_header header) {
     printf("\t[TCP]\n");
-    printf("\t\tTODO\n");
+    printf("\t\tSource Port: %d\n", header.src_port);
+    printf("\t\tDestination Port: %d\n", header.dest_port);
+    printf("\t\tSequence Number: %u\n", header.seq_num);
+    printf("\t\tAcknowledgment Number: %u\n", header.ack_num);
+    printf("\t\tData Offset: %d bytes\n", header.data_offset * 4);
+    printf("\t\tFlags: 0x%02x ", header.flags);
+    if (header.flags & 0x01) {
+        printf("(FIN) ");
+    }
+    if (header.flags & 0x02) {
+        printf("(SYN) ");
+    }
+    if (header.flags & 0x04) {
+        printf("(RST) ");
+    }
+    if (header.flags & 0x08) {
+        printf("(PSH) ");
+    }
+    if (header.flags & 0x10) {
+        printf("(ACK) ");
+    }
+    if (header.flags & 0x20) {
+        printf("(URG) ");
+    }
+    if (header.flags & 0x40) {
+        printf("(ECE) ");
+    }
+    if (header.flags & 0x80) {
+        printf("(CWR) ");
+    }
+    printf("\n");
+    printf("\t\tWindow Size: %d\n", header.window);
+    printf("\t\tChecksum: 0x%04x\n", header.checksum);
+    printf("\t\tUrgent Pointer: %d\n", header.urg_ptr);
 }
 
 void print_udp(struct udp_header header) {
     printf("\t[UDP]\n");
-    printf("\t\tTODO\n");
+    printf("\t\tSource Port: %d\n", header.src_port);
+    printf("\t\tDestination Port: %d\n", header.dest_port);
+    printf("\t\tLength: %d bytes\n", header.length);
+    printf("\t\tChecksum: 0x%04x\n", header.checksum);
 }
 
 int main(int argc, char** argv)
