@@ -38,6 +38,46 @@
 #define TCP_PSH  0x08
 #define TCP_ACK  0x10
 #define TCP_URG  0x20
+#define TCP_ECE  0x40
+#define TCP_CWR  0x80
+
+#define DNS_FLAG_QR  0x8000
+#define DNS_FLAG_AA  0x0400
+#define DNS_FLAG_TC  0x0200
+#define DNS_FLAG_RD  0x0100
+#define DNS_FLAG_RA  0x0080
+#define DNS_FLAG_AD  0x0020
+#define DNS_FLAG_CD  0x0010
+
+#define DNS_OPCODE_QUERY    0
+#define DNS_OPCODE_IQUERY   1
+#define DNS_OPCODE_STATUS   2
+#define DNS_OPCODE_NOTIFY   4
+#define DNS_OPCODE_UPDATE   5
+#define DNS_OPCODE_DSO      6
+
+#define DNS_RCODE_NOERROR       0
+#define DNS_RCODE_FORMERR       1
+#define DNS_RCODE_SERVFAIL      2
+#define DNS_RCODE_NXDOMAIN      3
+#define DNS_RCODE_NOTIMP        4
+#define DNS_RCODE_REFUSED       5
+#define DNS_RCODE_YXDOMAIN      6
+#define DNS_RCODE_YXRRSET       7
+#define DNS_RCODE_NXRRSET       8
+#define DNS_RCODE_NOTAUTH       9
+#define DNS_RCODE_NOTZONE       10
+#define DNS_RCODE_DSOTYPENI     11
+#define DNS_RCODE_BADVERS       16
+#define DNS_RCODE_BADKEY        17
+#define DNS_RCODE_BADTIME       18
+#define DNS_RCODE_BADMODE       19
+#define DNS_RCODE_BADNAME       20
+#define DNS_RCODE_BADALG        21
+#define DNS_RCODE_BADTRUNC      22
+#define DNS_RCODE_BADCOOKIE     23
+
+#define DNS_PORT 53
 
 struct ethernet_header {
     uint8_t  dest_mac[6];
@@ -102,12 +142,22 @@ struct tcp_header {
     uint16_t urg_ptr;
 };
 
+struct dns_header {
+    uint16_t transaction_id;
+    uint16_t flags;
+    uint16_t num_questions;
+    uint16_t num_answers;
+    uint16_t num_auth_rr;
+    uint16_t num_add_rr;
+};
+
 struct ethernet_header parse_ethernet(uint8_t *packet);
 struct ipv4_header parse_ipv4(uint8_t *packet);
 struct ipv6_header parse_ipv6(uint8_t *packet);
 struct arp_header parse_arp(uint8_t *packet);
 struct udp_header parse_udp(uint8_t *packet);
 struct tcp_header parse_tcp(uint8_t *packet);
+struct dns_header parse_dns(uint8_t *packet);
 
 void print_ethernet(struct ethernet_header header);
 void print_ipv4(struct ipv4_header header);
@@ -115,5 +165,6 @@ void print_ipv6(struct ipv6_header header);
 void print_arp(struct arp_header header);
 void print_udp(struct udp_header header);
 void print_tcp(struct tcp_header header);
+void print_dns(struct dns_header header);
 
 #endif /* SNIFFER_H */

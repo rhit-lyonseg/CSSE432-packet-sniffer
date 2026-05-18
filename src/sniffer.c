@@ -17,6 +17,8 @@
                 https://www.iana.org/assignments/arp-parameters/arp-parameters.xhtml
                 https://en.wikipedia.org/wiki/IPv4#DSCP
                 https://en.wikipedia.org/wiki/Explicit_Congestion_Notification
+                https://en.wikipedia.org/wiki/Domain_Name_System
+                https://www.iana.org/assignments/dns-parameters/dns-parameters.xhtml
 */
 
 #include <stdio.h>
@@ -40,7 +42,8 @@ struct ethernet_header parse_ethernet(uint8_t *packet)
     return header;
 }
 
-struct ipv4_header parse_ipv4(uint8_t *packet) {
+struct ipv4_header parse_ipv4(uint8_t *packet)
+{
     struct ipv4_header header;
 
     header.version = packet[0] >> 4;
@@ -117,6 +120,20 @@ struct tcp_header parse_tcp(uint8_t *packet)
     header.window = ((uint16_t)packet[14] << 8) | packet[15];
     header.checksum = ((uint16_t)packet[16] << 8) | packet[17];
     header.urg_ptr = ((uint16_t)packet[18] << 8) | packet[19];
+
+    return header;
+}
+
+struct dns_header parse_dns(uint8_t *packet)
+{
+    struct dns_header header;
+
+    header.transaction_id = ((uint16_t)packet[0] << 8) | packet[1];
+    header.flags          = ((uint16_t)packet[2] << 8) | packet[3];
+    header.num_questions  = ((uint16_t)packet[4] << 8) | packet[5];
+    header.num_answers    = ((uint16_t)packet[6] << 8) | packet[7];
+    header.num_auth_rr    = ((uint16_t)packet[8] << 8) | packet[9];
+    header.num_add_rr     = ((uint16_t)packet[10] << 8) | packet[11];
 
     return header;
 }
@@ -245,7 +262,8 @@ void print_ipv6(struct ipv6_header header)
            header.dest_ip[12], header.dest_ip[13], header.dest_ip[14], header.dest_ip[15]);
 }
 
-void print_arp(struct arp_header header) {
+void print_arp(struct arp_header header)
+{
     printf("\t[ARP]\n");
 
     /* HW Type */
@@ -295,7 +313,8 @@ void print_arp(struct arp_header header) {
                                             header.target_ip[2], header.target_ip[3]);
 }
 
-void print_tcp(struct tcp_header header) {
+void print_tcp(struct tcp_header header)
+{
     printf("\t[TCP]\n");
     printf("\t\tSource Port: %d\n", header.src_port);
     printf("\t\tDestination Port: %d\n", header.dest_port);
@@ -303,28 +322,28 @@ void print_tcp(struct tcp_header header) {
     printf("\t\tAcknowledgment Number: %u\n", header.ack_num);
     printf("\t\tData Offset: %d bytes\n", header.data_offset * 4);
     printf("\t\tFlags: 0x%02x ", header.flags);
-    if (header.flags & 0x01) {
+    if (header.flags & TCP_FIN) {
         printf("(FIN) ");
     }
-    if (header.flags & 0x02) {
+    if (header.flags & TCP_SYN) {
         printf("(SYN) ");
     }
-    if (header.flags & 0x04) {
+    if (header.flags & TCP_RST) {
         printf("(RST) ");
     }
-    if (header.flags & 0x08) {
+    if (header.flags & TCP_PSH) {
         printf("(PSH) ");
     }
-    if (header.flags & 0x10) {
+    if (header.flags & TCP_ACK) {
         printf("(ACK) ");
     }
-    if (header.flags & 0x20) {
+    if (header.flags & TCP_URG) {
         printf("(URG) ");
     }
-    if (header.flags & 0x40) {
+    if (header.flags & TCP_ECE) {
         printf("(ECE) ");
     }
-    if (header.flags & 0x80) {
+    if (header.flags & TCP_CWR) {
         printf("(CWR) ");
     }
     printf("\n");
@@ -333,12 +352,146 @@ void print_tcp(struct tcp_header header) {
     printf("\t\tUrgent Pointer: %d\n", header.urg_ptr);
 }
 
-void print_udp(struct udp_header header) {
+void print_udp(struct udp_header header)
+{
     printf("\t[UDP]\n");
     printf("\t\tSource Port: %d\n", header.src_port);
     printf("\t\tDestination Port: %d\n", header.dest_port);
     printf("\t\tLength: %d bytes\n", header.length);
     printf("\t\tChecksum: 0x%04x\n", header.checksum);
+}
+
+void print_dns(struct dns_header header)
+{
+    printf("\t[DNS]\n");
+    printf("\t\tTransaction ID: 0x%04x\n", header.transaction_id);
+
+    /* Type */
+    printf("\t\tType: ");
+    if (header.flags & DNS_FLAG_QR) {
+        printf("Response\n");
+    } else {
+        printf("Query\n");
+    }
+
+    /* Opcode */
+    uint8_t opcode = (header.flags >> 11) & 0x0F;
+    printf("\t\tOpcode: 0x%02x ", opcode);
+    if (opcode == DNS_OPCODE_QUERY) {
+        printf("(Query)\n");
+    } else if (opcode == DNS_OPCODE_IQUERY) {
+        printf("(Inverse Query)\n");
+    } else if (opcode == DNS_OPCODE_STATUS) {
+        printf("(Status)\n");
+    } else if (opcode == DNS_OPCODE_NOTIFY) {
+        printf("(Notify)\n");
+    } else if (opcode == DNS_OPCODE_UPDATE) {
+        printf("(Update)\n");
+    } else if (opcode == DNS_OPCODE_DSO) {
+        printf("(DNS Stateful Operations)\n");
+    } else {
+        printf("(Unassigned)\n");
+    }
+
+    /* Authoritative Answer */
+    printf("\t\tAuthoritative Answer: ");
+    if (header.flags & DNS_FLAG_AA) {
+        printf("Yes\n");
+    } else {
+        printf("No\n");
+    }
+
+    /* Truncated */
+    printf("\t\tTruncated: ");
+    if (header.flags & DNS_FLAG_TC) {
+        printf("Yes\n");
+    } else {
+        printf("No\n");
+    }
+
+    /* Recursion Desired */
+    printf("\t\tRecursion Desired: ");
+    if (header.flags & DNS_FLAG_RD) {
+        printf("Yes\n");
+    } else {
+        printf("No\n");
+    }
+
+    /* Recursion Available */
+    printf("\t\tRecursion Available: ");
+    if (header.flags & DNS_FLAG_RA) {
+        printf("Yes\n");
+    } else {
+        printf("No\n");
+    }
+
+    /* Authentic Data */
+    printf("\t\tAuthentic Data: ");
+    if (header.flags & DNS_FLAG_AD) {
+        printf("Yes\n");
+    } else {
+        printf("No\n");
+    }
+
+    /* Checking Disabled */
+    printf("\t\tChecking Disabled: ");
+    if (header.flags & DNS_FLAG_CD) {
+        printf("Yes\n");
+    } else {
+        printf("No\n");
+    }
+
+    /* Response Code */
+    uint8_t rcode = header.flags & 0x000F;
+    printf("\t\tResponse Code: 0x%02x ", rcode);
+    if (rcode == DNS_RCODE_NOERROR) {
+        printf("(NOERROR - No Error)\n");
+    } else if (rcode == DNS_RCODE_FORMERR) {
+        printf("(FORMERR - Format Error)\n");
+    } else if (rcode == DNS_RCODE_SERVFAIL) {
+        printf("(SERVFAIL - Server Failure)\n");
+    } else if (rcode == DNS_RCODE_NXDOMAIN) {
+        printf("(NXDOMAIN - Non-Existent Domain)\n");
+    } else if (rcode == DNS_RCODE_NOTIMP) {
+        printf("(NOTIMP - Not Implemented)\n");
+    } else if (rcode == DNS_RCODE_REFUSED) {
+        printf("(REFUSED - Query Refused)\n");
+    } else if (rcode == DNS_RCODE_YXDOMAIN) {
+        printf("(YXDOMAIN - Name Exists when it should not)\n");
+    } else if (rcode == DNS_RCODE_YXRRSET) {
+        printf("(YXRRSET - RR Set Exists when it should not)\n");
+    } else if (rcode == DNS_RCODE_NXRRSET) {
+        printf("(NXRRSET - RR Set that should exist does not)\n");
+    } else if (rcode == DNS_RCODE_NOTAUTH) {
+        printf("(NOTAUTH - Server Not Authoritative for zone)\n");
+    } else if (rcode == DNS_RCODE_NOTZONE) {
+        printf("(NOTZONE - Name not contained in zone)\n");
+    } else if (rcode == DNS_RCODE_DSOTYPENI) {
+        printf("(DSOTYPENI - DSO-TYPE Not Implemented)\n");
+    } else if (rcode == DNS_RCODE_BADVERS) {
+        printf("(BADVERS - Bad OPT Version)\n");
+    } else if (rcode == DNS_RCODE_BADKEY) {
+        printf("(BADKEY - Key not recognized)\n");
+    } else if (rcode == DNS_RCODE_BADTIME) {
+        printf("(BADTIME - Signature out of time window)\n");
+    } else if (rcode == DNS_RCODE_BADMODE) {
+        printf("(BADMODE - Bad TKEY Mode)\n");
+    } else if (rcode == DNS_RCODE_BADNAME) {
+        printf("(BADNAME - Duplicate key name)\n");
+    } else if (rcode == DNS_RCODE_BADALG) {
+        printf("(BADALG - Algorithm not supported)\n");
+    } else if (rcode == DNS_RCODE_BADTRUNC) {
+        printf("(BADTRUNC - Bad Truncation)\n");
+    } else if (rcode == DNS_RCODE_BADCOOKIE) {
+        printf("(BADCOOKIE - Bad/missing Server Cookie)\n");
+    } else {
+        printf("(Unknown)\n");
+    }
+
+    printf("\t\tNumber of Questions: %d\n", header.num_questions);
+    printf("\t\tNumber of Answers: %d\n", header.num_answers);
+    printf("\t\tNumber of Authority Records: %d\n", header.num_auth_rr);
+    printf("\t\tNumber of Additional Records: %d\n", header.num_add_rr);
 }
 
 int main(int argc, char** argv)
@@ -366,6 +519,7 @@ int main(int argc, char** argv)
     struct sockaddr_ll src_addr;
     socklen_t addr_len = sizeof(src_addr);
 
+    long long packet_cnt = 0;
     while (1) {
         ssize_t n = recvfrom(sock, buf, sizeof(buf), 0,
                             (struct sockaddr *)&src_addr, &addr_len);
@@ -374,11 +528,15 @@ int main(int argc, char** argv)
         if (src_addr.sll_ifindex != if_nametoindex("eth0"))
             continue;
 
+        packet_cnt++;
+
         /* buf[0..13]: Ethernet header
         buf[0..5]:  destination MAC
         buf[6..11]: source MAC
         buf[12..13]: EtherType (0x0800=IPv4, 0x0806=ARP, 0x86DD=IPv6)
         buf[14..n-1]: payload */
+
+        printf("---------------------- PACKET #%lld ----------------------\n\n", packet_cnt);
 
         struct ethernet_header eth_header;
         eth_header = parse_ethernet(buf);
@@ -400,6 +558,12 @@ int main(int argc, char** argv)
                 struct udp_header udp_header;
                 udp_header = parse_udp(buf+14+ip_len);
                 print_udp(udp_header);
+
+                if (udp_header.src_port == DNS_PORT || udp_header.dest_port == DNS_PORT) {
+                    struct dns_header dns_header;
+                    dns_header = parse_dns(buf+14+ip_len+8);
+                    print_dns(dns_header);
+                }
             }
         }
         /* IPv6 */
@@ -409,13 +573,19 @@ int main(int argc, char** argv)
             print_ipv6(ipv6_header);
 
             if (ipv6_header.next_header == IP_PROTO_TCP) {
-                struct tcp_header tcp;
-                tcp = parse_tcp(buf+14+40);
-                print_tcp(tcp);
+                struct tcp_header tcp_header;
+                tcp_header = parse_tcp(buf+14+40);
+                print_tcp(tcp_header);
             } else if (ipv6_header.next_header == IP_PROTO_UDP) {
-                struct udp_header udp;
-                udp = parse_udp(buf+14+40);
-                print_udp(udp);
+                struct udp_header udp_header;
+                udp_header = parse_udp(buf+14+40);
+                print_udp(udp_header);
+
+                if (udp_header.src_port == DNS_PORT || udp_header.dest_port == DNS_PORT) {
+                    struct dns_header dns_header;
+                    dns_header = parse_dns(buf+14+40+8);
+                    print_dns(dns_header);
+                }
             }
         }
         /* ARP */
@@ -424,5 +594,7 @@ int main(int argc, char** argv)
             arp_header = parse_arp(buf+14);
             print_arp(arp_header);
         }
+
+        printf("-------------------------------------------------------\n\n");
     }
 }
