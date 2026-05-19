@@ -159,12 +159,12 @@ struct udp_header parse_udp(uint8_t *packet);
 struct tcp_header parse_tcp(uint8_t *packet);
 struct dns_header parse_dns(uint8_t *packet);
 
-void print_ethernet(struct ethernet_header header);
-void print_ipv4(struct ipv4_header header);
-void print_ipv6(struct ipv6_header header);
-void print_arp(struct arp_header header);
-void print_udp(struct udp_header header);
-void print_tcp(struct tcp_header header);
-void print_dns(struct dns_header header);
+void print_ethernet(FILE *f, struct ethernet_header header);
+void print_ipv4(FILE *f, struct ipv4_header header);
+void print_ipv6(FILE *f, struct ipv6_header header);
+void print_arp(FILE *f, struct arp_header header);
+void print_udp(FILE *f, struct udp_header header);
+void print_tcp(FILE *f, struct tcp_header header);
+void print_dns(FILE *f, struct dns_header header);
 
 #endif /* SNIFFER_H */
