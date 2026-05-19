@@ -1,2 +1,3 @@
 src/sniffer
 src/sniffer.o
+src/sniffer-output.txt
